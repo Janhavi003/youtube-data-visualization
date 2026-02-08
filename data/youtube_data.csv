@@ -1,21 +1,11 @@
 title,views,likes,comments,duration,upload_date
-Gemini in Chrome: Your agentic browsing assistant,2036,0,0,2912.0,
-Project Genie: Create and Explore Worlds,13737,0,0,2552.0,
-Shaping the Future of Tech: The Google Developer Experts Program India,608,0,0,181.0,
-The Smoke Jumpers: Scaling Gemini’s serving infrastructure,4254,0,0,1591.0,
-JAX Data Loading: Using the Grain Dataset API for Simple and Declarative Data Processing,2050,0,0,344.0,
-Grain DataLoaders Tutorial: The Ultimate Data Loader for JAX,2931,0,0,450.0,
-Keras Turns 10: A decade of deep learning,2669,0,0,2397.0,
-Mo’s Story: Starting Families,2081,0,0,225.0,
-"Understanding JAX: JIT, XLA, and Pure Functions Explained",17758,0,0,606.0,
-Aniket’s Story: AI & I,38387,0,0,234.0,
-How to use KerasHub with Hugging Face,4518,0,0,353.0,
-The future of AI isn't just code—it's the community. 🌐,2607,0,0,61.0,
-How to Automate PR Summaries with Opal AI,2806,0,0,375.0,
-Build AI Apps with Genkit Go,8804,0,0,1009.0,
-Introducing FunctionGemma,324573,0,0,303.0,
-"Keras Recommenders: reliable, state-of-the-art recommendations for ranking and retrieval",7906,0,0,555.0,
-Gemini 3 and Gen UI in Google Search,15978,0,0,1305.0,
-Individual contributor or manager: choosing your engineering path,10532,0,0,309.0,
-Rewinding back to our favorites launches from 2025 - Google Developer News (End of Year Edition),3564,0,0,399.0,
-Build your first Typescript agent with Google ADK,13517,0,0,944.0,
+Gemini in Chrome: Your agentic browsing assistant,4708,175,25,2912,20260206
+Project Genie: Create and Explore Worlds,13918,386,48,2552,20260129
+Shaping the Future of Tech: The Google Developer Experts Program India,630,22,3,180,20260126
+The Smoke Jumpers: Scaling Gemini’s serving infrastructure,4323,133,12,1590,20260126
+JAX Data Loading: Using the Grain Dataset API for Simple and Declarative Data Processing,2064,68,4,344,20260122
+Grain DataLoaders Tutorial: The Ultimate Data Loader for JAX,2946,127,13,450,20260116
+Keras Turns 10: A decade of deep learning,2674,80,7,2396,20260116
+Mo’s Story: Starting Families,2085,108,13,224,20260116
+"Understanding JAX: JIT, XLA, and Pure Functions Explained",17795,660,41,606,20260115
+Aniket’s Story: AI & I,38469,1607,61,234,20260115
