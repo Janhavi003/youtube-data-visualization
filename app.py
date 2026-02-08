@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html
+from dash import dcc, html, Input, Output
 import plotly.express as px
 
 from youtube_scraper import get_channel_videos
@@ -17,45 +17,63 @@ df = get_channel_videos(CHANNEL_URL)
 # =========================
 # DATA TRANSFORMATION
 # =========================
-# Sort videos by views (descending)
 df = df.sort_values(by="views", ascending=False)
-
-# Take top 10 videos
 df = df.head(10)
-
-# =========================
-# VISUALIZATION
-# =========================
-fig = px.bar(
-    df,
-    x="title",
-    y="views",
-    title="Top 10 Most Viewed Videos",
-    labels={
-        "views": "View Count",
-        "title": "Video Title"
-    }
-)
-
-fig.update_layout(
-    xaxis_tickangle=-45,
-    height=600,
-    margin=dict(b=200)
-)
 
 # =========================
 # DASH APP
 # =========================
 app = dash.Dash(__name__)
-server = app.server  # needed later for deployment
+server = app.server
 
 app.layout = html.Div(
     style={"padding": "20px"},
     children=[
         html.H1("YouTube Data Visualization Dashboard"),
-        dcc.Graph(figure=fig)
+
+        # -------- DROPDOWN --------
+        dcc.Dropdown(
+            id="metric-dropdown",
+            options=[
+                {"label": "Views", "value": "views"},
+                {"label": "Likes", "value": "likes"},
+                {"label": "Comments", "value": "comments"},
+            ],
+            value="views",
+            clearable=False,
+            style={"width": "300px"}
+        ),
+
+        dcc.Graph(id="bar-chart")
     ]
 )
+
+# =========================
+# CALLBACK
+# =========================
+@app.callback(
+    Output("bar-chart", "figure"),
+    Input("metric-dropdown", "value")
+)
+def update_chart(selected_metric):
+    fig = px.bar(
+        df,
+        x="title",
+        y=selected_metric,
+        title=f"Top 10 Videos by {selected_metric.capitalize()}",
+        labels={
+            selected_metric: selected_metric.capitalize(),
+            "title": "Video Title"
+        }
+    )
+
+    fig.update_layout(
+        xaxis_tickangle=-45,
+        height=600,
+        margin=dict(b=200)
+    )
+
+    return fig
 
 # =========================
 # RUN SERVER
