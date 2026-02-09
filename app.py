@@ -37,6 +37,8 @@ app.layout = html.Div(
                 {"label": "Views", "value": "views"},
                 {"label": "Likes", "value": "likes"},
                 {"label": "Comments", "value": "comments"},
+                {"label": "Like Rate (%)", "value": "like_rate"},
+                {"label": "Comment Rate (%)", "value": "comment_rate"},
             ],
             value="views",
             clearable=False,
@@ -60,11 +62,17 @@ def update_chart(n_clicks, channel_url, metric):
     if not channel_url:
         return px.bar(title="Enter a YouTube channel URL and click Load")
 
-    # Fetch data
     df = get_channel_videos(channel_url)
 
     if df.empty:
         return px.bar(title="No data found for this channel")
+
+    # -------- ENGAGEMENT METRICS --------
+    df["like_rate"] = (df["likes"] / df["views"]) * 100
+    df["comment_rate"] = (df["comments"] / df["views"]) * 100
+
+    # Handle division by zero
+    df = df.replace([float("inf"), -float("inf")], 0).fillna(0)
 
     # Sort + top 10
     df = df.sort_values(by=metric, ascending=False).head(10)
@@ -73,9 +81,9 @@ def update_chart(n_clicks, channel_url, metric):
         df,
         x="title",
         y=metric,
-        title=f"Top 10 Videos by {metric.capitalize()}",
+        title=f"Top 10 Videos by {metric.replace('_', ' ').title()}",
         labels={
-            metric: metric.capitalize(),
+            metric: metric.replace("_", " ").title(),
             "title": "Video Title"
         }
     )
