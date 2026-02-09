@@ -1,24 +1,9 @@
 import dash
-from dash import dcc, html, Input, Output
+from dash import dcc, html, Input, Output, State
 import plotly.express as px
+import pandas as pd
 
 from youtube_scraper import get_channel_videos
-
-# =========================
-# CONFIG
-# =========================
-CHANNEL_URL = "https://www.youtube.com/@GoogleDevelopers/videos"
-
-# =========================
-# DATA FETCHING
-# =========================
-df = get_channel_videos(CHANNEL_URL)
-
-# =========================
-# DATA TRANSFORMATION
-# =========================
-df = df.sort_values(by="views", ascending=False)
-df = df.head(10)
 
 # =========================
 # DASH APP
@@ -31,7 +16,21 @@ app.layout = html.Div(
     children=[
         html.H1("YouTube Data Visualization Dashboard"),
 
-        # -------- DROPDOWN --------
+        # -------- CHANNEL INPUT --------
+        html.Div(
+            style={"marginBottom": "15px"},
+            children=[
+                dcc.Input(
+                    id="channel-input",
+                    type="text",
+                    placeholder="Paste YouTube channel URL here",
+                    style={"width": "400px", "marginRight": "10px"}
+                ),
+                html.Button("Load Channel", id="load-button", n_clicks=0)
+            ]
+        ),
+
+        # -------- METRIC DROPDOWN --------
         dcc.Dropdown(
             id="metric-dropdown",
             options=[
@@ -41,7 +40,7 @@ app.layout = html.Div(
             ],
             value="views",
             clearable=False,
-            style={"width": "300px"}
+            style={"width": "300px", "marginBottom": "20px"}
         ),
 
         dcc.Graph(id="bar-chart")
@@ -53,16 +52,30 @@ app.layout = html.Div(
 # =========================
 @app.callback(
     Output("bar-chart", "figure"),
-    Input("metric-dropdown", "value")
+    Input("load-button", "n_clicks"),
+    State("channel-input", "value"),
+    State("metric-dropdown", "value")
 )
-def update_chart(selected_metric):
+def update_chart(n_clicks, channel_url, metric):
+    if not channel_url:
+        return px.bar(title="Enter a YouTube channel URL and click Load")
+
+    # Fetch data
+    df = get_channel_videos(channel_url)
+
+    if df.empty:
+        return px.bar(title="No data found for this channel")
+
+    # Sort + top 10
+    df = df.sort_values(by=metric, ascending=False).head(10)
+
     fig = px.bar(
         df,
         x="title",
-        y=selected_metric,
-        title=f"Top 10 Videos by {selected_metric.capitalize()}",
+        y=metric,
+        title=f"Top 10 Videos by {metric.capitalize()}",
         labels={
-            selected_metric: selected_metric.capitalize(),
+            metric: metric.capitalize(),
             "title": "Video Title"
         }
     )
