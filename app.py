@@ -1,6 +1,7 @@
 import dash
 from dash import dcc, html, Input, Output, State
 import plotly.express as px
+import pandas as pd
 
 from youtube_scraper import get_channel_videos
 
@@ -23,6 +24,26 @@ CARD_STYLE = {
     "padding": "20px",
     "boxShadow": "0 6px 18px rgba(0,0,0,0.08)",
     "marginBottom": "20px"
+}
+
+PRIMARY_BUTTON = {
+    "padding": "10px 16px",
+    "borderRadius": "6px",
+    "border": "none",
+    "backgroundColor": "#4f46e5",
+    "color": "white",
+    "cursor": "pointer",
+    "fontWeight": "500"
+}
+
+SECONDARY_BUTTON = {
+    "padding": "10px 16px",
+    "borderRadius": "6px",
+    "border": "1px solid #4f46e5",
+    "backgroundColor": "white",
+    "color": "#4f46e5",
+    "cursor": "pointer",
+    "fontWeight": "500"
 }
 
 TOAST_SUCCESS = {
@@ -53,12 +74,40 @@ TOAST_ERROR = {
     "maxWidth": "fit-content"
 }
 
+TOAST_ANIMATION = {
+    "animation": "slideDownFade 0.4s ease-out"
+}
+
 # =========================
 # LAYOUT
 # =========================
 app.layout = html.Div(
     style=PAGE_STYLE,
     children=[
+
+        # ---- CSS animation ----
+        dcc.Markdown(
+            """
+<style>
+@keyframes slideDownFade {
+    from { opacity: 0; transform: translateY(-12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+            """,
+            dangerously_allow_html=True
+        ),
+
+        # ---- Stores ----
+        dcc.Store(id="data-store"),
+        dcc.Store(id="toast-store"),
+
+        dcc.Interval(
+            id="toast-timer",
+            interval=3000,
+            n_intervals=0,
+            disabled=True
+        ),
 
         # -------- CHANNEL HEADER --------
         html.Div(id="channel-header", style={"textAlign": "center", "marginBottom": "20px"}),
@@ -70,10 +119,10 @@ app.layout = html.Div(
                 html.Div(
                     style={
                         "display": "flex",
-                        "gap": "10px",
+                        "gap": "12px",
                         "justifyContent": "center",
                         "flexWrap": "wrap",
-                        "marginBottom": "15px"
+                        "marginBottom": "18px"
                     },
                     children=[
                         dcc.Input(
@@ -81,14 +130,24 @@ app.layout = html.Div(
                             type="text",
                             placeholder="Paste YouTube channel URL",
                             style={
-                                "width": "380px",
+                                "width": "420px",
                                 "padding": "10px",
                                 "borderRadius": "6px",
                                 "border": "1px solid #ccc"
                             }
                         ),
-                        html.Button("Load Channel", id="load-button", n_clicks=0),
-                        html.Button("Refresh Data", id="refresh-button", n_clicks=0),
+                        html.Button(
+                            "Load Channel",
+                            id="load-button",
+                            n_clicks=0,
+                            style=PRIMARY_BUTTON
+                        ),
+                        html.Button(
+                            "Refresh Data",
+                            id="refresh-button",
+                            n_clicks=0,
+                            style=SECONDARY_BUTTON
+                        ),
                     ]
                 ),
 
@@ -116,28 +175,27 @@ app.layout = html.Div(
             type="circle",
             children=[
                 html.Div(
-                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
+                    style={
+                        "display": "grid",
+                        "gridTemplateColumns": "1fr 1fr",
+                        "gap": "20px"
+                    },
                     children=[
-
-                        # ---- BAR CHART CARD ----
                         html.Div(
                             style=CARD_STYLE,
                             children=[
                                 dcc.Graph(id="bar-chart"),
                                 html.P(
                                     "Bars represent the top 10 videos ranked by the selected metric. "
-                                    "Hover on bars to see full video titles.",
+                                    "Hover to see full video titles.",
                                     style={
                                         "fontSize": "13px",
                                         "color": "#555",
-                                        "marginTop": "10px",
                                         "textAlign": "center"
                                     }
                                 )
                             ]
                         ),
-
-                        # ---- SCATTER CARD ----
                         html.Div(style=CARD_STYLE, children=[dcc.Graph(id="scatter-chart")]),
                     ]
                 )
@@ -147,81 +205,97 @@ app.layout = html.Div(
 )
 
 # =========================
-# CALLBACK
+# LOAD / REFRESH DATA
 # =========================
 @app.callback(
-    Output("bar-chart", "figure"),
-    Output("scatter-chart", "figure"),
-    Output("toast-message", "children"),
+    Output("data-store", "data"),
+    Output("toast-store", "data"),
     Output("channel-header", "children"),
     Input("load-button", "n_clicks"),
     Input("refresh-button", "n_clicks"),
     State("channel-input", "value"),
-    State("metric-dropdown", "value")
+    prevent_initial_call=True
 )
-def update_dashboard(load_clicks, refresh_clicks, channel_url, metric):
+def load_data(load_clicks, refresh_clicks, channel_url):
     if not channel_url:
-        return px.scatter(), px.scatter(), "", ""
+        return None, {"type": "error", "text": "Please enter a channel URL"}, ""
 
     refresh = refresh_clicks > load_clicks
     df, channel_name, channel_logo = get_channel_videos(channel_url, refresh=refresh)
 
     if df.empty:
-        toast = html.Div(["❌", "No data found for this channel"], style=TOAST_ERROR)
-        return px.scatter(), px.scatter(), toast, ""
+        return None, {"type": "error", "text": "No data found for this channel"}, ""
 
-    # -------- METRICS --------
+    header = html.Div(
+        children=[
+            html.Img(src=channel_logo, style={"height": "80px", "borderRadius": "50%"}),
+            html.H2(channel_name)
+        ]
+    )
+
+    return df.to_dict("records"), {"type": "success", "text": "Channel loaded successfully"}, header
+
+# =========================
+# UPDATE CHARTS
+# =========================
+@app.callback(
+    Output("bar-chart", "figure"),
+    Output("scatter-chart", "figure"),
+    Input("metric-dropdown", "value"),
+    Input("data-store", "data")
+)
+def update_charts(metric, data):
+    if not data:
+        return px.scatter(), px.scatter()
+
+    df = pd.DataFrame(data)
+
     df["like_rate"] = (df["likes"] / df["views"]) * 100
     df["comment_rate"] = (df["comments"] / df["views"]) * 100
     df = df.replace([float("inf"), -float("inf")], 0).fillna(0)
 
-    # Sort & rank
     df_bar = df.sort_values(by=metric, ascending=False).head(10).reset_index(drop=True)
     df_bar["rank"] = df_bar.index + 1
 
-    # -------- BAR CHART (NO TITLES) --------
     bar_fig = px.bar(
         df_bar,
         x="rank",
         y=metric,
         hover_data={"title": True},
-        labels={
-            "rank": "Rank",
-            metric: metric.replace("_", " ").title()
-        },
         title=f"Top 10 Videos by {metric.replace('_', ' ').title()}"
     )
 
-    bar_fig.update_layout(
-        xaxis=dict(tickmode="linear"),
-        height=500
-    )
-
-    # -------- SCATTER --------
     scatter_fig = px.scatter(
         df,
         x="views",
         y="like_rate",
         size="likes",
         hover_name="title",
-        title="Views vs Like Rate",
-        labels={"views": "Views", "like_rate": "Like Rate (%)"}
+        title="Views vs Like Rate"
     )
 
-    # -------- HEADER --------
-    header = html.Div(
-        children=[
-            html.Img(
-                src=channel_logo,
-                style={"height": "80px", "borderRadius": "50%", "marginBottom": "8px"}
-            ),
-            html.H2(channel_name)
-        ]
-    )
+    return bar_fig, scatter_fig
 
-    toast = html.Div(["✅", "Channel loaded successfully"], style=TOAST_SUCCESS)
+# =========================
+# TOAST HANDLER
+# =========================
+@app.callback(
+    Output("toast-message", "children"),
+    Output("toast-timer", "disabled"),
+    Input("toast-store", "data"),
+    Input("toast-timer", "n_intervals")
+)
+def handle_toast(toast_data, _):
+    if not toast_data:
+        return "", True
 
-    return bar_fig, scatter_fig, toast, header
+    style = TOAST_SUCCESS if toast_data["type"] == "success" else TOAST_ERROR
+    icon = "✅" if toast_data["type"] == "success" else "❌"
+
+    return html.Div(
+        [icon, toast_data["text"]],
+        style={**style, **TOAST_ANIMATION}
+    ), False
 
 
 if __name__ == "__main__":
