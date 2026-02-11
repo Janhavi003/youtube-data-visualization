@@ -19,15 +19,38 @@ PAGE_STYLE = {
 
 CARD_STYLE = {
     "backgroundColor": "white",
-    "borderRadius": "10px",
+    "borderRadius": "12px",
     "padding": "20px",
-    "boxShadow": "0 4px 10px rgba(0,0,0,0.08)",
+    "boxShadow": "0 6px 18px rgba(0,0,0,0.08)",
     "marginBottom": "20px"
 }
 
-HEADER_STYLE = {
-    "textAlign": "center",
-    "marginBottom": "30px"
+TOAST_SUCCESS = {
+    "display": "inline-flex",
+    "alignItems": "center",
+    "gap": "8px",
+    "backgroundColor": "#e6fffa",
+    "color": "#065f46",
+    "padding": "10px 16px",
+    "borderRadius": "8px",
+    "border": "1px solid #99f6e4",
+    "fontWeight": "500",
+    "margin": "10px auto",
+    "maxWidth": "fit-content"
+}
+
+TOAST_ERROR = {
+    "display": "inline-flex",
+    "alignItems": "center",
+    "gap": "8px",
+    "backgroundColor": "#fee2e2",
+    "color": "#7f1d1d",
+    "padding": "10px 16px",
+    "borderRadius": "8px",
+    "border": "1px solid #fecaca",
+    "fontWeight": "500",
+    "margin": "10px auto",
+    "maxWidth": "fit-content"
 }
 
 # =========================
@@ -37,19 +60,10 @@ app.layout = html.Div(
     style=PAGE_STYLE,
     children=[
 
-        # -------- HEADER --------
-        html.Div(
-            style=HEADER_STYLE,
-            children=[
-                html.H1("YouTube Data Visualization Dashboard"),
-                html.P(
-                    "Explore video performance and engagement metrics for any YouTube channel",
-                    style={"color": "#555"}
-                )
-            ]
-        ),
+        # -------- CHANNEL HEADER --------
+        html.Div(id="channel-header", style={"textAlign": "center", "marginBottom": "20px"}),
 
-        # -------- CONTROLS CARD --------
+        # -------- CONTROLS --------
         html.Div(
             style=CARD_STYLE,
             children=[
@@ -57,8 +71,8 @@ app.layout = html.Div(
                     style={
                         "display": "flex",
                         "gap": "10px",
-                        "flexWrap": "wrap",
                         "justifyContent": "center",
+                        "flexWrap": "wrap",
                         "marginBottom": "15px"
                     },
                     children=[
@@ -73,69 +87,60 @@ app.layout = html.Div(
                                 "border": "1px solid #ccc"
                             }
                         ),
-                        html.Button(
-                            "Load Channel",
-                            id="load-button",
-                            n_clicks=0,
-                            style={
-                                "padding": "10px 16px",
-                                "borderRadius": "6px",
-                                "border": "none",
-                                "backgroundColor": "#4f46e5",
-                                "color": "white",
-                                "cursor": "pointer"
-                            }
-                        ),
-                        html.Button(
-                            "Refresh Data",
-                            id="refresh-button",
-                            n_clicks=0,
-                            style={
-                                "padding": "10px 16px",
-                                "borderRadius": "6px",
-                                "border": "1px solid #4f46e5",
-                                "backgroundColor": "white",
-                                "color": "#4f46e5",
-                                "cursor": "pointer"
-                            }
-                        ),
+                        html.Button("Load Channel", id="load-button", n_clicks=0),
+                        html.Button("Refresh Data", id="refresh-button", n_clicks=0),
                     ]
                 ),
 
-                html.Div(
-                    style={"maxWidth": "300px", "margin": "0 auto"},
-                    children=[
-                        dcc.Dropdown(
-                            id="metric-dropdown",
-                            options=[
-                                {"label": "Views", "value": "views"},
-                                {"label": "Likes", "value": "likes"},
-                                {"label": "Comments", "value": "comments"},
-                                {"label": "Like Rate (%)", "value": "like_rate"},
-                                {"label": "Comment Rate (%)", "value": "comment_rate"},
-                            ],
-                            value="views",
-                            clearable=False
-                        )
-                    ]
+                dcc.Dropdown(
+                    id="metric-dropdown",
+                    options=[
+                        {"label": "Views", "value": "views"},
+                        {"label": "Likes", "value": "likes"},
+                        {"label": "Comments", "value": "comments"},
+                        {"label": "Like Rate (%)", "value": "like_rate"},
+                        {"label": "Comment Rate (%)", "value": "comment_rate"},
+                    ],
+                    value="views",
+                    clearable=False,
+                    style={"maxWidth": "300px", "margin": "0 auto"}
                 )
             ]
         ),
 
+        # -------- TOAST --------
+        html.Div(id="toast-message", style={"textAlign": "center"}),
+
         # -------- CHARTS --------
-        html.Div(
-            style={
-                "display": "grid",
-                "gridTemplateColumns": "1fr 1fr",
-                "gap": "20px"
-            },
+        dcc.Loading(
+            type="circle",
             children=[
-                html.Div(style=CARD_STYLE, children=[
-                    dcc.Graph(id="bar-chart")
-                ]),
-                html.Div(style=CARD_STYLE, children=[
-                    dcc.Graph(id="scatter-chart")
-                ]),
+                html.Div(
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
+                    children=[
+
+                        # ---- BAR CHART CARD ----
+                        html.Div(
+                            style=CARD_STYLE,
+                            children=[
+                                dcc.Graph(id="bar-chart"),
+                                html.P(
+                                    "Bars represent the top 10 videos ranked by the selected metric. "
+                                    "Hover on bars to see full video titles.",
+                                    style={
+                                        "fontSize": "13px",
+                                        "color": "#555",
+                                        "marginTop": "10px",
+                                        "textAlign": "center"
+                                    }
+                                )
+                            ]
+                        ),
+
+                        # ---- SCATTER CARD ----
+                        html.Div(style=CARD_STYLE, children=[dcc.Graph(id="scatter-chart")]),
+                    ]
+                )
             ]
         )
     ]
@@ -147,47 +152,76 @@ app.layout = html.Div(
 @app.callback(
     Output("bar-chart", "figure"),
     Output("scatter-chart", "figure"),
+    Output("toast-message", "children"),
+    Output("channel-header", "children"),
     Input("load-button", "n_clicks"),
     Input("refresh-button", "n_clicks"),
     State("channel-input", "value"),
     State("metric-dropdown", "value")
 )
-def update_charts(load_clicks, refresh_clicks, channel_url, metric):
+def update_dashboard(load_clicks, refresh_clicks, channel_url, metric):
     if not channel_url:
-        empty = px.scatter(title="Enter a YouTube channel URL and click Load")
-        return empty, empty
+        return px.scatter(), px.scatter(), "", ""
 
     refresh = refresh_clicks > load_clicks
-    df = get_channel_videos(channel_url, refresh=refresh)
+    df, channel_name, channel_logo = get_channel_videos(channel_url, refresh=refresh)
 
     if df.empty:
-        empty = px.scatter(title="No data found for this channel")
-        return empty, empty
+        toast = html.Div(["❌", "No data found for this channel"], style=TOAST_ERROR)
+        return px.scatter(), px.scatter(), toast, ""
 
+    # -------- METRICS --------
     df["like_rate"] = (df["likes"] / df["views"]) * 100
     df["comment_rate"] = (df["comments"] / df["views"]) * 100
     df = df.replace([float("inf"), -float("inf")], 0).fillna(0)
 
-    df_bar = df.sort_values(by=metric, ascending=False).head(10)
+    # Sort & rank
+    df_bar = df.sort_values(by=metric, ascending=False).head(10).reset_index(drop=True)
+    df_bar["rank"] = df_bar.index + 1
 
+    # -------- BAR CHART (NO TITLES) --------
     bar_fig = px.bar(
         df_bar,
-        x="title",
+        x="rank",
         y=metric,
+        hover_data={"title": True},
+        labels={
+            "rank": "Rank",
+            metric: metric.replace("_", " ").title()
+        },
         title=f"Top 10 Videos by {metric.replace('_', ' ').title()}"
     )
-    bar_fig.update_layout(xaxis_tickangle=-45, margin=dict(b=200))
 
+    bar_fig.update_layout(
+        xaxis=dict(tickmode="linear"),
+        height=500
+    )
+
+    # -------- SCATTER --------
     scatter_fig = px.scatter(
         df,
         x="views",
         y="like_rate",
         size="likes",
         hover_name="title",
-        title="Views vs Like Rate"
+        title="Views vs Like Rate",
+        labels={"views": "Views", "like_rate": "Like Rate (%)"}
     )
 
-    return bar_fig, scatter_fig
+    # -------- HEADER --------
+    header = html.Div(
+        children=[
+            html.Img(
+                src=channel_logo,
+                style={"height": "80px", "borderRadius": "50%", "marginBottom": "8px"}
+            ),
+            html.H2(channel_name)
+        ]
+    )
+
+    toast = html.Div(["✅", "Channel loaded successfully"], style=TOAST_SUCCESS)
+
+    return bar_fig, scatter_fig, toast, header
 
 
 if __name__ == "__main__":
