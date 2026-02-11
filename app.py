@@ -7,49 +7,143 @@ from youtube_scraper import get_channel_videos
 app = dash.Dash(__name__)
 server = app.server
 
-app.layout = html.Div(
-    style={"padding": "20px"},
-    children=[
-        html.H1("YouTube Data Visualization Dashboard"),
+# =========================
+# STYLES
+# =========================
+PAGE_STYLE = {
+    "backgroundColor": "#f5f7fa",
+    "minHeight": "100vh",
+    "padding": "30px",
+    "fontFamily": "Arial, sans-serif"
+}
 
+CARD_STYLE = {
+    "backgroundColor": "white",
+    "borderRadius": "10px",
+    "padding": "20px",
+    "boxShadow": "0 4px 10px rgba(0,0,0,0.08)",
+    "marginBottom": "20px"
+}
+
+HEADER_STYLE = {
+    "textAlign": "center",
+    "marginBottom": "30px"
+}
+
+# =========================
+# LAYOUT
+# =========================
+app.layout = html.Div(
+    style=PAGE_STYLE,
+    children=[
+
+        # -------- HEADER --------
         html.Div(
-            style={"marginBottom": "15px"},
+            style=HEADER_STYLE,
             children=[
-                dcc.Input(
-                    id="channel-input",
-                    type="text",
-                    placeholder="Paste YouTube channel URL here",
-                    style={"width": "400px", "marginRight": "10px"}
-                ),
-                html.Button("Load Channel", id="load-button", n_clicks=0),
-                html.Button("Refresh Data", id="refresh-button", n_clicks=0, style={"marginLeft": "10px"}),
+                html.H1("YouTube Data Visualization Dashboard"),
+                html.P(
+                    "Explore video performance and engagement metrics for any YouTube channel",
+                    style={"color": "#555"}
+                )
             ]
         ),
 
-        dcc.Dropdown(
-            id="metric-dropdown",
-            options=[
-                {"label": "Views", "value": "views"},
-                {"label": "Likes", "value": "likes"},
-                {"label": "Comments", "value": "comments"},
-                {"label": "Like Rate (%)", "value": "like_rate"},
-                {"label": "Comment Rate (%)", "value": "comment_rate"},
-            ],
-            value="views",
-            clearable=False,
-            style={"width": "300px", "marginBottom": "20px"}
+        # -------- CONTROLS CARD --------
+        html.Div(
+            style=CARD_STYLE,
+            children=[
+                html.Div(
+                    style={
+                        "display": "flex",
+                        "gap": "10px",
+                        "flexWrap": "wrap",
+                        "justifyContent": "center",
+                        "marginBottom": "15px"
+                    },
+                    children=[
+                        dcc.Input(
+                            id="channel-input",
+                            type="text",
+                            placeholder="Paste YouTube channel URL",
+                            style={
+                                "width": "380px",
+                                "padding": "10px",
+                                "borderRadius": "6px",
+                                "border": "1px solid #ccc"
+                            }
+                        ),
+                        html.Button(
+                            "Load Channel",
+                            id="load-button",
+                            n_clicks=0,
+                            style={
+                                "padding": "10px 16px",
+                                "borderRadius": "6px",
+                                "border": "none",
+                                "backgroundColor": "#4f46e5",
+                                "color": "white",
+                                "cursor": "pointer"
+                            }
+                        ),
+                        html.Button(
+                            "Refresh Data",
+                            id="refresh-button",
+                            n_clicks=0,
+                            style={
+                                "padding": "10px 16px",
+                                "borderRadius": "6px",
+                                "border": "1px solid #4f46e5",
+                                "backgroundColor": "white",
+                                "color": "#4f46e5",
+                                "cursor": "pointer"
+                            }
+                        ),
+                    ]
+                ),
+
+                html.Div(
+                    style={"maxWidth": "300px", "margin": "0 auto"},
+                    children=[
+                        dcc.Dropdown(
+                            id="metric-dropdown",
+                            options=[
+                                {"label": "Views", "value": "views"},
+                                {"label": "Likes", "value": "likes"},
+                                {"label": "Comments", "value": "comments"},
+                                {"label": "Like Rate (%)", "value": "like_rate"},
+                                {"label": "Comment Rate (%)", "value": "comment_rate"},
+                            ],
+                            value="views",
+                            clearable=False
+                        )
+                    ]
+                )
+            ]
         ),
 
+        # -------- CHARTS --------
         html.Div(
-            style={"display": "flex", "gap": "30px"},
+            style={
+                "display": "grid",
+                "gridTemplateColumns": "1fr 1fr",
+                "gap": "20px"
+            },
             children=[
-                dcc.Graph(id="bar-chart", style={"flex": 1}),
-                dcc.Graph(id="scatter-chart", style={"flex": 1}),
+                html.Div(style=CARD_STYLE, children=[
+                    dcc.Graph(id="bar-chart")
+                ]),
+                html.Div(style=CARD_STYLE, children=[
+                    dcc.Graph(id="scatter-chart")
+                ]),
             ]
         )
     ]
 )
 
+# =========================
+# CALLBACK
+# =========================
 @app.callback(
     Output("bar-chart", "figure"),
     Output("scatter-chart", "figure"),
@@ -64,7 +158,6 @@ def update_charts(load_clicks, refresh_clicks, channel_url, metric):
         return empty, empty
 
     refresh = refresh_clicks > load_clicks
-
     df = get_channel_videos(channel_url, refresh=refresh)
 
     if df.empty:
@@ -83,7 +176,6 @@ def update_charts(load_clicks, refresh_clicks, channel_url, metric):
         y=metric,
         title=f"Top 10 Videos by {metric.replace('_', ' ').title()}"
     )
-
     bar_fig.update_layout(xaxis_tickangle=-45, margin=dict(b=200))
 
     scatter_fig = px.scatter(
@@ -96,6 +188,7 @@ def update_charts(load_clicks, refresh_clicks, channel_url, metric):
     )
 
     return bar_fig, scatter_fig
+
 
 if __name__ == "__main__":
     app.run(debug=True)
