@@ -6,130 +6,44 @@ import pandas as pd
 from youtube_scraper import get_channel_videos
 
 app = dash.Dash(__name__)
-server = app.server
+server = app.server   # REQUIRED for gunicorn
 
-# =========================
-# STYLES
-# =========================
-PAGE_STYLE = {
-    "backgroundColor": "#f5f7fa",
-    "minHeight": "100vh",
-    "padding": "40px 30px 30px 30px",  # top padding fixed
-    "fontFamily": "Arial, sans-serif"
-}
-
-CARD_STYLE = {
-    "backgroundColor": "white",
-    "borderRadius": "12px",
-    "padding": "20px",
-    "boxShadow": "0 6px 18px rgba(0,0,0,0.08)",
-    "marginBottom": "20px"
-}
-
-PRIMARY_BUTTON = {
-    "padding": "10px 16px",
-    "borderRadius": "6px",
-    "border": "none",
-    "backgroundColor": "#4f46e5",
-    "color": "white",
-    "cursor": "pointer",
-    "fontWeight": "500"
-}
-
-SECONDARY_BUTTON = {
-    "padding": "10px 16px",
-    "borderRadius": "6px",
-    "border": "1px solid #4f46e5",
-    "backgroundColor": "white",
-    "color": "#4f46e5",
-    "cursor": "pointer",
-    "fontWeight": "500"
-}
-
-TOAST_SUCCESS = {
-    "display": "inline-flex",
-    "alignItems": "center",
-    "gap": "8px",
-    "backgroundColor": "#e6fffa",
-    "color": "#065f46",
-    "padding": "10px 16px",
-    "borderRadius": "8px",
-    "border": "1px solid #99f6e4",
-    "fontWeight": "500",
-    "margin": "10px auto",
-    "maxWidth": "fit-content"
-}
-
-TOAST_ERROR = {
-    "display": "inline-flex",
-    "alignItems": "center",
-    "gap": "8px",
-    "backgroundColor": "#fee2e2",
-    "color": "#7f1d1d",
-    "padding": "10px 16px",
-    "borderRadius": "8px",
-    "border": "1px solid #fecaca",
-    "fontWeight": "500",
-    "margin": "10px auto",
-    "maxWidth": "fit-content"
-}
-
-TOAST_ANIMATION = {
-    "animation": "slideDownFade 0.4s ease-out"
-}
 
 # =========================
 # LAYOUT
 # =========================
 app.layout = html.Div(
-    style=PAGE_STYLE,
+    style={
+        "backgroundColor": "#f5f7fa",
+        "minHeight": "100vh",
+        "padding": "40px 30px",
+        "fontFamily": "Arial, sans-serif"
+    },
     children=[
 
-        # ---- CSS animation ----
-        dcc.Markdown(
-            """
-<style>
-@keyframes slideDownFade {
-    from { opacity: 0; transform: translateY(-12px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-</style>
-            """,
-            dangerously_allow_html=True
-        ),
-
-        # -------- PROJECT HEADER --------
+        # -------- TITLE --------
         html.Div(
+            style={"textAlign": "center", "marginBottom": "30px"},
             children=[
-                html.H1(
-                    "YouTube Data Visualization Dashboard",
-                    style={"marginBottom": "6px", "fontWeight": "700", "color": "#111827"}
-                ),
+                html.H1("YouTube Data Visualization Dashboard"),
                 html.P(
                     "Analyze views, likes, comments, and engagement across YouTube channels",
-                    style={"marginTop": "0", "color": "#6b7280", "fontSize": "15px"}
-                ),
-            ],
-            style={"textAlign": "center", "marginBottom": "30px"}
+                    style={"color": "#6b7280"}
+                )
+            ]
         ),
 
-        # ---- Stores ----
         dcc.Store(id="data-store"),
-        dcc.Store(id="toast-store"),
-
-        dcc.Interval(
-            id="toast-timer",
-            interval=3000,
-            n_intervals=0,
-            disabled=True
-        ),
-
-        # -------- CHANNEL HEADER --------
-        html.Div(id="channel-header", style={"textAlign": "center", "marginBottom": "20px"}),
 
         # -------- CONTROLS --------
         html.Div(
-            style={**CARD_STYLE, "marginTop": "10px"},
+            style={
+                "background": "white",
+                "borderRadius": "12px",
+                "padding": "20px",
+                "boxShadow": "0 6px 18px rgba(0,0,0,0.08)",
+                "marginBottom": "20px"
+            },
             children=[
                 html.Div(
                     style={
@@ -151,8 +65,20 @@ app.layout = html.Div(
                                 "border": "1px solid #ccc"
                             }
                         ),
-                        html.Button("Load Channel", id="load-button", n_clicks=0, style=PRIMARY_BUTTON),
-                        html.Button("Refresh Data", id="refresh-button", n_clicks=0, style=SECONDARY_BUTTON),
+                        html.Button(
+                            "Load Channel",
+                            id="load-button",
+                            n_clicks=0,
+                            style={
+                                "padding": "10px 16px",
+                                "borderRadius": "6px",
+                                "border": "none",
+                                "backgroundColor": "#4f46e5",
+                                "color": "white",
+                                "cursor": "pointer",
+                                "fontWeight": "500"
+                            }
+                        ),
                     ]
                 ),
 
@@ -172,67 +98,53 @@ app.layout = html.Div(
             ]
         ),
 
-        # -------- TOAST --------
-        html.Div(id="toast-message", style={"textAlign": "center"}),
-
         # -------- CHARTS --------
-        dcc.Loading(
-            type="circle",
+        html.Div(
+            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
             children=[
                 html.Div(
-                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
-                    children=[
-
-                        html.Div(
-                            style=CARD_STYLE,
-                            children=[
-                                dcc.Graph(id="bar-chart"),
-                                html.P(
-                                    "Bars represent the top 10 videos ranked by the selected metric. "
-                                    "Hover to see full video titles.",
-                                    style={"fontSize": "13px", "color": "#555", "textAlign": "center"}
-                                )
-                            ]
-                        ),
-
-                        html.Div(style=CARD_STYLE, children=[dcc.Graph(id="scatter-chart")]),
-                    ]
-                )
+                    style={
+                        "background": "white",
+                        "borderRadius": "12px",
+                        "padding": "20px",
+                        "boxShadow": "0 6px 18px rgba(0,0,0,0.08)"
+                    },
+                    children=[dcc.Graph(id="bar-chart")]
+                ),
+                html.Div(
+                    style={
+                        "background": "white",
+                        "borderRadius": "12px",
+                        "padding": "20px",
+                        "boxShadow": "0 6px 18px rgba(0,0,0,0.08)"
+                    },
+                    children=[dcc.Graph(id="scatter-chart")]
+                ),
             ]
         )
     ]
 )
 
 # =========================
-# LOAD / REFRESH DATA
+# LOAD DATA
 # =========================
 @app.callback(
     Output("data-store", "data"),
-    Output("toast-store", "data"),
-    Output("channel-header", "children"),
     Input("load-button", "n_clicks"),
-    Input("refresh-button", "n_clicks"),
     State("channel-input", "value"),
     prevent_initial_call=True
 )
-def load_data(load_clicks, refresh_clicks, channel_url):
+def load_data(_, channel_url):
     if not channel_url:
-        return None, {"type": "error", "text": "Please enter a channel URL"}, ""
+        return None
 
-    refresh = refresh_clicks > load_clicks
-    df, channel_name, channel_logo = get_channel_videos(channel_url, refresh=refresh)
+    df, _, _ = get_channel_videos(channel_url)
 
     if df.empty:
-        return None, {"type": "error", "text": "No data found for this channel"}, ""
+        return None
 
-    header = html.Div(
-        children=[
-            html.Img(src=channel_logo, style={"height": "80px", "borderRadius": "50%"}),
-            html.H2(channel_name)
-        ]
-    )
+    return df.to_dict("records")
 
-    return df.to_dict("records"), {"type": "success", "text": "Channel loaded successfully"}, header
 
 # =========================
 # UPDATE CHARTS
@@ -249,9 +161,10 @@ def update_charts(metric, data):
 
     df = pd.DataFrame(data)
 
-    df["like_rate"] = (df["likes"] / df["views"]) * 100
-    df["comment_rate"] = (df["comments"] / df["views"]) * 100
-    df = df.replace([float("inf"), -float("inf")], 0).fillna(0)
+    # Safe metrics
+    df["like_rate"] = (df["likes"] / df["views"]).replace([float("inf")], 0) * 100
+    df["comment_rate"] = (df["comments"] / df["views"]).replace([float("inf")], 0) * 100
+    df = df.fillna(0)
 
     df_bar = df.sort_values(by=metric, ascending=False).head(10).reset_index(drop=True)
     df_bar["rank"] = df_bar.index + 1
@@ -275,27 +188,6 @@ def update_charts(metric, data):
 
     return bar_fig, scatter_fig
 
-# =========================
-# TOAST HANDLER
-# =========================
-@app.callback(
-    Output("toast-message", "children"),
-    Output("toast-timer", "disabled"),
-    Input("toast-store", "data"),
-    Input("toast-timer", "n_intervals")
-)
-def handle_toast(toast_data, _):
-    if not toast_data:
-        return "", True
-
-    style = TOAST_SUCCESS if toast_data["type"] == "success" else TOAST_ERROR
-    icon = "✅" if toast_data["type"] == "success" else "❌"
-
-    return html.Div(
-        [icon, toast_data["text"]],
-        style={**style, **TOAST_ANIMATION}
-    ), False
-
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
