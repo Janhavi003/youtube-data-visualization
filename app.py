@@ -14,7 +14,7 @@ server = app.server
 PAGE_STYLE = {
     "backgroundColor": "#f5f7fa",
     "minHeight": "100vh",
-    "padding": "30px",
+    "padding": "40px 30px 30px 30px",  # top padding fixed
     "fontFamily": "Arial, sans-serif"
 }
 
@@ -98,6 +98,21 @@ app.layout = html.Div(
             dangerously_allow_html=True
         ),
 
+        # -------- PROJECT HEADER --------
+        html.Div(
+            children=[
+                html.H1(
+                    "YouTube Data Visualization Dashboard",
+                    style={"marginBottom": "6px", "fontWeight": "700", "color": "#111827"}
+                ),
+                html.P(
+                    "Analyze views, likes, comments, and engagement across YouTube channels",
+                    style={"marginTop": "0", "color": "#6b7280", "fontSize": "15px"}
+                ),
+            ],
+            style={"textAlign": "center", "marginBottom": "30px"}
+        ),
+
         # ---- Stores ----
         dcc.Store(id="data-store"),
         dcc.Store(id="toast-store"),
@@ -114,7 +129,7 @@ app.layout = html.Div(
 
         # -------- CONTROLS --------
         html.Div(
-            style=CARD_STYLE,
+            style={**CARD_STYLE, "marginTop": "10px"},
             children=[
                 html.Div(
                     style={
@@ -136,18 +151,8 @@ app.layout = html.Div(
                                 "border": "1px solid #ccc"
                             }
                         ),
-                        html.Button(
-                            "Load Channel",
-                            id="load-button",
-                            n_clicks=0,
-                            style=PRIMARY_BUTTON
-                        ),
-                        html.Button(
-                            "Refresh Data",
-                            id="refresh-button",
-                            n_clicks=0,
-                            style=SECONDARY_BUTTON
-                        ),
+                        html.Button("Load Channel", id="load-button", n_clicks=0, style=PRIMARY_BUTTON),
+                        html.Button("Refresh Data", id="refresh-button", n_clicks=0, style=SECONDARY_BUTTON),
                     ]
                 ),
 
@@ -175,12 +180,9 @@ app.layout = html.Div(
             type="circle",
             children=[
                 html.Div(
-                    style={
-                        "display": "grid",
-                        "gridTemplateColumns": "1fr 1fr",
-                        "gap": "20px"
-                    },
+                    style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
                     children=[
+
                         html.Div(
                             style=CARD_STYLE,
                             children=[
@@ -188,14 +190,11 @@ app.layout = html.Div(
                                 html.P(
                                     "Bars represent the top 10 videos ranked by the selected metric. "
                                     "Hover to see full video titles.",
-                                    style={
-                                        "fontSize": "13px",
-                                        "color": "#555",
-                                        "textAlign": "center"
-                                    }
+                                    style={"fontSize": "13px", "color": "#555", "textAlign": "center"}
                                 )
                             ]
                         ),
+
                         html.Div(style=CARD_STYLE, children=[dcc.Graph(id="scatter-chart")]),
                     ]
                 )
